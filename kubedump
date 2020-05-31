@@ -1,0 +1,115 @@
+#!/bin/bash
+
+# Example1:
+#   "./kubedump -n kube-system"
+# invokes
+#   "kubectl -n kube-system get -o yaml RESOURCE > ./kubedump_output/kube-system/RESOURCE/OBJECT"
+# for each RESOURCE in kube-system namespace.
+#
+# Example2:
+#   "./kubedump -d output -a"
+# invokes
+#   "kubectl -n NAMESPACE get -o yaml RESOURCE > ./output/NAMESPACE/RESOURCE/OBJECT"
+# for each RESOURCE in every NAMESPACE.
+
+function kube_get_all {
+	local ns=$1; shift
+	local destdir=$1; shift
+
+	namespaced="--namespaced=true"
+	cmd=${client}
+	if [ x"${ns}" != x"non-namespaced" ]; then
+		cmd="${cmd} -n ${ns}"
+	else
+		namespaced="--namespaced=false"
+	fi
+
+	# https://kubernetes.slack.com/archives/C0QKVN230/p1538652407000100
+	cmd_res="${cmd} api-resources --verbs=list ${namespaced} -o name | xargs -n 1 ${cmd} get --show-kind -o name"
+	echo "cmd_res: ${cmd_res}"
+	resources=$(eval ${cmd_res})
+	for res in ${resources}; do
+		kind=$(echo ${res%/*})
+		name=$(echo ${res#*/})
+		#_res=$(echo ${res} | sed -e 's/\//_/')
+		echo -n "==> ns=${ns}, kind=${kind}, name=${name}"
+		if [ x"${kind}" = x"packagemanifest.packages.operators.coreos.com" ] && [ x"${ns}" != x"openshift-marketplace" ]; then
+				echo " ...skip"
+				continue
+		else
+			echo
+		fi
+
+		output_dir=${destdir}/${ns}/${kind}
+		mkdir -p ${output_dir}
+
+		output_file=${output_dir}/oc_describe_${kind}_${name}
+		#runcmd="${cmd} describe ${res}"
+		#echo "cmd: ${runcmd}" > ${output_file}
+		#${runcmd} >> ${output_file}
+		${cmd} describe ${res} > ${output_file}
+
+		output_file=${output_dir}/oc_get_-o_yaml_${kind}_${name}
+		#runcmd="${cmd} get -o yaml ${res}"
+		#echo "cmd: ${runcmd}" > ${output_file}
+		#${runcmd} >> ${output_file}
+		${cmd} get -o yaml ${res} > ${output_file}
+
+		output_file=${output_dir}/oc_get_-o_wide_${kind}
+		if [ ! -f ${output_file} ]; then
+			#runcmd="${cmd} get -o wide ${kind}"
+			#echo "cmd: ${runcmd}" > ${output_file}
+			#${runcmd} >> ${output_file}
+			${cmd} get -o wide ${kind} > ${output_file}
+		fi
+	done
+	echo
+}
+
+function usage {
+	echo "$0 [-c client] [-d destdir] [-n namespace]"
+	exit 1
+}
+
+client=kubectl
+#client=oc
+ns=default
+all_namespaces=0
+destdir=./kubedump_output
+
+while getopts ac:d:m:n:h OPT
+do
+    case $OPT in
+        a)  all_namespaces=1
+            ;;
+        c)  client=$OPTARG
+            ;;
+        d)  destdir=$OPTARG
+            ;;
+        n)  ns=$OPTARG
+            ;;
+        h)  usage_exit
+            ;;
+        \?) usage_exit
+            ;;
+    esac
+done
+shift $((OPTIND - 1))
+
+echo "*** all_namespaces=$all_namespaces, client=$client, destdir=$destdir ns=$ns"
+#exit
+
+mkdir -p ${destdir}
+
+if [ x"${all_namespaces}" = x"1" ]; then
+	#for ns in non-namespaced $(${client} get namespaces | awk '{print $1}' | grep -v NAME); do
+	for ns in non-namespaced $(${client} get namespaces -o=custom-columns=NAME:.metadata.name --no-headers); do
+		echo "=> ns=${ns}"
+		kube_get_all ${ns} ${destdir}
+	done
+	echo
+	
+	exit
+fi
+
+kube_get_all ${ns} ${destdir}
