@@ -1,0 +1,16 @@
+#!/bin/bash
+
+topdir=router_configs
+mkdir -p ${topdir}
+
+for pod in $(oc -n openshift-ingress get pod -o=custom-columns=NAME:.metadata.name --no-headers); do
+	echo "=> ${pod}"
+	output_dir=${topdir}/${pod}
+	mkdir -p ${output_dir}
+	#for file in $(oc -n openshift-ingress rsh ${pod} ls -1 | cat); do
+	for file in $(kubectl -n openshift-ingress exec -it ${pod} ls); do
+		_file=$(echo ${file} | tr '\r' '\n')
+		echo "==> ${_file}"
+		oc -n openshift-ingress rsh ${pod} cat "${_file}" > ${output_dir}/${_file}
+	done
+done
