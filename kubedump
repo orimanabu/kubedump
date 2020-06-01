@@ -32,30 +32,34 @@ function kube_get_all {
 		kind=$(echo ${res%/*})
 		name=$(echo ${res#*/})
 		#_res=$(echo ${res} | sed -e 's/\//_/')
+
 		echo -n "==> ns=${ns}, kind=${kind}, name=${name}"
+		if [ x"${kind}" = x"event" -o x"${kind}" = x"event.events.k8s.io" ] && [ x"${ns}" != x"default" ]; then
+				echo " ...skip"
+				continue
+		fi
 		if [ x"${kind}" = x"packagemanifest.packages.operators.coreos.com" ] && [ x"${ns}" != x"openshift-marketplace" ]; then
 				echo " ...skip"
 				continue
-		else
-			echo
 		fi
+		echo
 
 		output_dir=${destdir}/${ns}/${kind}
-		mkdir -p ${output_dir}
+		mkdir -p ${output_dir}/misc
 
-		output_file=${output_dir}/oc_describe_${kind}_${name}
+		output_file=${output_dir}/${client}_describe_${kind}_${name}
 		#runcmd="${cmd} describe ${res}"
 		#echo "cmd: ${runcmd}" > ${output_file}
 		#${runcmd} >> ${output_file}
 		${cmd} describe ${res} > ${output_file}
 
-		output_file=${output_dir}/oc_get_-o_yaml_${kind}_${name}
+		output_file=${output_dir}/${client}_get_-o_yaml_${kind}_${name}
 		#runcmd="${cmd} get -o yaml ${res}"
 		#echo "cmd: ${runcmd}" > ${output_file}
 		#${runcmd} >> ${output_file}
 		${cmd} get -o yaml ${res} > ${output_file}
 
-		output_file=${output_dir}/oc_get_-o_wide_${kind}
+		output_file=${output_dir}/${client}_get_-o_wide_${kind}
 		if [ ! -f ${output_file} ]; then
 			#runcmd="${cmd} get -o wide ${kind}"
 			#echo "cmd: ${runcmd}" > ${output_file}
