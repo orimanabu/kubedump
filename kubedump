@@ -34,10 +34,10 @@ function kube_get_all {
 		#_res=$(echo ${res} | sed -e 's/\//_/')
 
 		echo -n "==> ns=${ns}, kind=${kind}, name=${name}"
-		if [ x"${kind}" = x"event" -o x"${kind}" = x"event.events.k8s.io" ] && [ x"${ns}" != x"default" ]; then
-				echo " ...skip"
-				continue
-		fi
+#		if [ x"${kind}" = x"event" -o x"${kind}" = x"event.events.k8s.io" ] && [ x"${ns}" != x"default" ]; then
+#				echo " ...skip"
+#				continue
+#		fi
 		if [ x"${kind}" = x"packagemanifest.packages.operators.coreos.com" ] && [ x"${ns}" != x"openshift-marketplace" ]; then
 				echo " ...skip"
 				continue
