@@ -7,7 +7,7 @@ fi
 output_dir=$1; shift
 
 mkdir -p ${output_dir}/misc
-oc -n openshift-cluster-version logs $(oc -n openshift-cluster-version get pod -o custom-columns=NAME:.metadata.name --no-headers) > ${output_dir}/misc/
+oc -n openshift-cluster-version logs $(oc -n openshift-cluster-version get pod -o custom-columns=NAME:.metadata.name --no-headers) > ${output_dir}/misc/log.cvo
 
 kubectl api-resources -o wide > ${output_dir}/misc/kubectl_api-resources_-o_wide
 
